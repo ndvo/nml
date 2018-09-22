@@ -50,6 +50,7 @@ func replaceIncisos(match string) string {
 }
 
 
+// marcaIncisos identifica os incisos a partir de regex e os substitui por HTML li do tipo I
 func marcaIncisos(t string) (tm string){
   r, _ := regexp.Compile(`(?m:^\s*([IXVLC]+)\s*[-\s\.]\s*(.*)$)`)
   //tm = r.ReplaceAllStringFunc(t, "<li type=\"I\" class=\"inciso\" id=\"inciso$1\" >${2}</li>")
@@ -57,12 +58,15 @@ func marcaIncisos(t string) (tm string){
   return
 }
 
+// marcaIncisos identifica as alíneas a partir de regex e os substitui por HTML li do tipo a
 func marcaAlineas(t string) (tm string){
   r, _ := regexp.Compile(`(?m:^\s*([a-z])\s*[)\.-]\s*(.*)$)`)
   tm = r.ReplaceAllString(t, "<li type=\"a\" class=\"alinea\" id=\"alinea$1\" >${2}</li>")
   return
 }
 
+// marcaListas identifica listas e as cerca com a tag ol
+// presume-se que não há listas não ordenadas na legislação
 func marcaListas(t string) (tm string){
   // Multiple lines group
   // Set a group from the first <li> until the first non <li> element
@@ -71,6 +75,7 @@ func marcaListas(t string) (tm string){
   tm = r.ReplaceAllString(t, "<ol>$0</ol>")
   return
 }
+
 
 func api(w http.ResponseWriter, r *http.Request) {
   //w.Header().Set("Content-Type", "application/txt; charset=utf-8")
