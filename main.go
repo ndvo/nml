@@ -82,7 +82,7 @@ func api(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
     t, _ := template.ParseFiles("templates/norma.html")
-    m:= "Convert txt to html"
+    m:= "Conversor txt para html"
     t.Execute(w, m)
 
 	case "POST":
