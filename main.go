@@ -16,12 +16,13 @@ import (
 
 func textToHTML(t string) (h string){
   if m, _ := regexp.MatchString(".", t); m {
-    h = marcaListas(
+    h = marcaAgrupamentos(
+        marcaListas(
         marcaAlineas(
         marcaIncisos(
         marcaEpigrafe(
         marcaParagrafos(
-        marcaArtigos(t))))))
+        marcaArtigos(t)))))))
 
   }else{
     h = "nope"
@@ -38,7 +39,12 @@ func marcaEpigrafe(t string)(tm string){
 
 
 //Art. 5º A ementa será grafada por meio de caracteres que a realcem e explicitará, de modo conciso e sob a forma de título, o objeto da lei.
-//func marcaEmenta()(){}
+func marcaEmenta(t string)(tm string){
+  //TODO: Identificar de forma mais específica a Ementa
+  r, _ := regexp.Compile(`\s*\p{Lu}\p{Ll}*[\p{Zs}\p{P}\p{L}]*\p{Po}\p{Z}*\`)
+  tm = r.ReplaceAllString(t, "<p class=\"ementa\">$0</p>")
+  return
+}
 
 // Art. 6º O preâmbulo indicará o órgão ou instituição competente para a prática do ato e sua base legal.
 
@@ -47,6 +53,14 @@ func marcaEpigrafe(t string)(tm string){
 // VI - os Capítulos, Títulos, Livros e Partes serão grafados em letras maiúsculas e identificados por algarismos romanos, podendo estas últimas desdobrar-se em Parte Geral e Parte Especial ou ser subdivididas em partes expressas em numeral ordinal, por extenso;
 // VII - as Subseções e Seções serão identificadas em algarismos romanos, grafadas em letras minúsculas e postas em negrito ou caracteres que as coloquem em realce;
 // VIII - a composição prevista no inciso V poderá também compreender agrupamentos em Disposições Preliminares, Gerais, Finais ou Transitórias, conforme necessário.
+
+// marcaAgrupamentos identifica Subsecoes, Secoes, Capitulo, Titulo, Livro, Parte
+func marcaAgrupamentos(t string) (tm string){
+  r, _ := regexp.Compile(`(?m:^\s*(Parte|Livro|Título|Capítulo|Seção|Subseção)\s+([IXVLC]+)\s*\n\s*([\p{L} ]+)\s*\n)`)
+  tm = r.ReplaceAllString(t, "<div class=\"$1\">\n\t<p class=\"agrupamento-tipo $1-$2\">$1 $2</p>\n\t<p class=\"agrupamento-nome\">$3</p>\n</div>\n")
+  return
+}
+
 
 // Art. 10 I - a unidade básica de articulação será o artigo, indicado pela abreviatura "Art.", seguida de numeração ordinal até o nono e cardinal a partir deste;
 // b) é vedada, mesmo quando recomendável, qualquer renumeração de artigos e de unidades superiores ao artigo, referidas no inciso V do art. 10, devendo ser utilizado o mesmo número do artigo ou unidade imediatamente anterior, seguido de letras maiúsculas, em ordem alfabética, tantas quantas forem suficientes para identificar os acréscimos;                    (Redação dada pela Lei Complementar nº 107, de 26.4.2001)
