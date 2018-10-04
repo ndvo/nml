@@ -7,22 +7,87 @@ import (
   "net/http"
 	"html/template"
   "github.com/ndvo/roman"
+  "github.com/ndvo/utils"
 )
 // Marca em IDs e Classes a estrutura de uma lei construída em observância à 
 // LEI COMPLEMENTAR Nº 95, DE 26 DE FEVEREIRO DE 1998
-
+//http://www.planalto.gov.br/ccivil_03/Dicas/Estrutur.htm
 
 // O termo ‘dispositivo’ mencionado nesta Lei refere-se a artigos, parágrafos, incisos, alíneas ou itens.
+func marcaDispositivos(t string) (tm string){
+  r, _ := regexp.Compile(`(?m:^\p{Zs}*((Art\. |§|Parágrafo único\.|[IVXLCM]+ [–-] |[a-z]\) |[0-9]+\.)[^\r\n$]+))`)
+  tm = r.ReplaceAllString(t, "<dispositivo>$1</dispositivo>")
+  return
+}
+
+// Art. 10
+// V - o agrupamento de artigos poderá constituir Subseções; o de Subseções, a Seção; o de Seções, o Capítulo; o de Capítulos, o Título; o de Títulos, o Livro e o de Livros, a Parte;
+// VI - os Capítulos, Títulos, Livros e Partes serão grafados em letras maiúsculas e identificados por algarismos romanos, podendo estas últimas desdobrar-se em Parte Geral e Parte Especial ou ser subdivididas em partes expressas em numeral ordinal, por extenso;
+// VII - as Subseções e Seções serão identificadas em algarismos romanos, grafadas em letras minúsculas e postas em negrito ou caracteres que as coloquem em realce;
+// VIII - a composição prevista no inciso V poderá também compreender agrupamentos em Disposições Preliminares, Gerais, Finais ou Transitórias, conforme necessário.
+
+// marcaAgrupamentos identifica Subsecoes, Secoes, Capitulo, Titulo, Livro, Parte
+func marcaAgrupamentos(t string) (tm string){
+  r, _ := regexp.Compile(`(?m:^\s*(P A R T E|PARTE|Parte|Livro|LIVRO|TÍTULO|Título|CAPÍTULO|Capítulo|Seção|Subseção)\s+([\p{Lu} ]|[IXVLC]+)\s+([\p{L}\p{Zs}\p{P}]+))`)
+  tm = r.ReplaceAllString(t, "<agrupamento>$1 $2 $3</agrupamento>")
+  return
+}
+
+
+func sanitizaAgrupamento(t string)(tm string){
+  r, _:= regexp.Compile(`<agrupamento>([\p{L} ]+[EeoO])\s([IVXLCM\s]*)</agrupamento>`)
+  tm = utils.ReplaceAllStringSubmatchFuncTeste(r, t, removeEspacos )
+  return
+}
+
+func removeEspacos(t string)(tm string){
+  r, _:= regexp.Compile(`\s`)
+  tm = r.ReplaceAllString(t, "")
+  return
+}
+
+
+func marcaParte(t string) (tm string){
+  r, _ := regexp.Compile(`(?m:<agrupamento>(?:P A R T E|PARTE|Parte)\p{Zs}+([0-9]+|[\p{L} ]+)</agrupamento>(((\s*<dispositivo>|\s*<agrupamento>(?:LIVRO|TÍTULO|CAPÍTULO|Seção|Subseção)).*)*))`)
+  tm = r.ReplaceAllString(t, "<Parte class=\"agrupamento\"><Rotulo>PARTE $1</Rotulo> $2 </Parte>")
+  return
+}
+
+
+func marcaLivro(t string) (tm string){
+  tm = t
+  return tm
+}
+
+func marcaCapitulo(t string) (tm string){
+  tm = t
+  return tm
+}
+
+func marcaSecao(t string) (tm string){
+  tm = t
+  return tm
+}
+
+func marcaSubsecao(t string) (tm string){
+  tm = t
+  return tm
+}
+
+func marcaNormativo(t string) (tm string){
+  r, _ := regexp.Compile(`(?m:(<(?:agrupamento|dispositivo)>[\p{L}\P{L}]*</(?:agrupamento|dispositivo)>))`)
+  tm = r.ReplaceAllString(t, "<normativo>\n$1\n</normativo>")
+  return
+}
 
 func textToHTML(t string) (h string){
   if m, _ := regexp.MatchString(".", t); m {
-    h = marcaAgrupamentos(
-        marcaListas(
-        marcaAlineas(
-        marcaIncisos(
-        marcaEpigrafe(
-        marcaParagrafos(
-        marcaArtigos(t)))))))
+    h = marcaDispositivos(t)
+    h = marcaAgrupamentos(h)
+    h = marcaNormativo(h)
+    h = marcaParte(h)
+    h = marcaArtigos(h)
+    h = marcaParagrafos(h)
 
   }else{
     h = "nope"
@@ -48,25 +113,13 @@ func marcaEmenta(t string)(tm string){
 
 // Art. 6º O preâmbulo indicará o órgão ou instituição competente para a prática do ato e sua base legal.
 
-// Art. 10
-// V - o agrupamento de artigos poderá constituir Subseções; o de Subseções, a Seção; o de Seções, o Capítulo; o de Capítulos, o Título; o de Títulos, o Livro e o de Livros, a Parte;
-// VI - os Capítulos, Títulos, Livros e Partes serão grafados em letras maiúsculas e identificados por algarismos romanos, podendo estas últimas desdobrar-se em Parte Geral e Parte Especial ou ser subdivididas em partes expressas em numeral ordinal, por extenso;
-// VII - as Subseções e Seções serão identificadas em algarismos romanos, grafadas em letras minúsculas e postas em negrito ou caracteres que as coloquem em realce;
-// VIII - a composição prevista no inciso V poderá também compreender agrupamentos em Disposições Preliminares, Gerais, Finais ou Transitórias, conforme necessário.
-
-// marcaAgrupamentos identifica Subsecoes, Secoes, Capitulo, Titulo, Livro, Parte
-func marcaAgrupamentos(t string) (tm string){
-  r, _ := regexp.Compile(`(?m:^\s*(Parte|Livro|Título|Capítulo|Seção|Subseção)\s+([IXVLC]+)\s*\n\s*([\p{L} ]+)\s*\n)`)
-  tm = r.ReplaceAllString(t, "<div class=\"$1\">\n\t<p class=\"agrupamento-tipo $1-$2\">$1 $2</p>\n\t<p class=\"agrupamento-nome\">$3</p>\n</div>\n")
-  return
-}
 
 
 // Art. 10 I - a unidade básica de articulação será o artigo, indicado pela abreviatura "Art.", seguida de numeração ordinal até o nono e cardinal a partir deste;
 // b) é vedada, mesmo quando recomendável, qualquer renumeração de artigos e de unidades superiores ao artigo, referidas no inciso V do art. 10, devendo ser utilizado o mesmo número do artigo ou unidade imediatamente anterior, seguido de letras maiúsculas, em ordem alfabética, tantas quantas forem suficientes para identificar os acréscimos;                    (Redação dada pela Lei Complementar nº 107, de 26.4.2001)
 func marcaArtigos(t string) (tm string){
-  r, _ := regexp.Compile(`(?m:^\s*[Aa]rt[\.\s]\s*(\d+)[oªº°]?[\.\s]\s*(.*)$)`)
-  tm = r.ReplaceAllString(t, "<p class=\"art\" id=\"art$1\" >Art. ${1} ${2}</p>")
+  r, _ := regexp.Compile(`(?m:<dispositivo>Art\. ([0-9]+)[oªº°]?[\.\s]\s*(.*)</dispositivo>((\s*<dispositivo>(?:[0-9]+\.|§|Parágrafo único\.|[IVXLCM]+ [–-] |[a-z]\)).*)*))`)
+  tm = r.ReplaceAllString(t, "<Artigo id=\"art$1\" class=\"dispositivo\"><Caput>Art. $1 $2</Caput> $3</artigo>\n")
   return
 }
 
@@ -77,7 +130,6 @@ func replaceIncisos(match string) string {
   submatches := r.FindStringSubmatch(match)
   arabic, err := roman.ToInt(submatches[1])
   if err == nil {
-    println("roman is ", submatches[1], "arabic is", arabic)
     return  fmt.Sprintf(
       `<li value="%d"type="I" class="inciso" id="inciso%d" >%s</li>`,
         arabic,
@@ -114,14 +166,15 @@ func marcaListas(t string) (tm string){
   // Set a group from the first <li> until the first non <li> element
   // Surround the group with <ol>
   r, _ := regexp.Compile(`(?m:^\s*(<li[^>]*>[^<]*</\s*li>[\s\n]*)+)[\s\n]*`)
-  tm = r.ReplaceAllString(t, "<ol>$0</ol>\r\r")
+  tm = r.ReplaceAllString(t, "<ol>$0</ol>\n\n")
   return
 }
 
 // marcaParagrafos marca parágrafos com classes e id
 func marcaParagrafos(t string) (tm string){
-  r, _ := regexp.Compile(`(?m:^\s*§\s*(\d+)[ºoª]\.?\s+(.*))`)
-  tm = r.ReplaceAllString(t, "<p class=\"paragrafo\" id=\"\">§$1 $2</p> ")
+  //r, _ := regexp.Compile(`(?m:^\s*§\s*(\d+)[ºoª]\.?\s+(.*))`)
+  r, _ := regexp.Compile(`(?m:^\s*<dispositivo>(§\s*[0-9]+[ºoª]|Parágrafo único)\.?\s+(.*)</dispositivo>((\s*<dispositivo>(?:[0-9]+\.|[IVXLCM]+ [–-] |[a-z]\)).*)*))`)
+  tm = r.ReplaceAllString(t, "<Paragrafo class=\"dispositivo\" id=\"\"><caput>$1 $2</caput> $3 </Paragrafo> ")
   return
 }
 
